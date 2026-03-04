@@ -3,3 +3,7 @@ __pycache__/
 *.pkl
 *.csv
 .ipynb_checkpoints
+
+data/raw/
+data/interim/
+data/processed/
