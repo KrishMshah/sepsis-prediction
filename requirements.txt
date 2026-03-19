@@ -1,12 +1,30 @@
-pandas
-numpy
-scikit-learn
-xgboost
-shap
-matplotlib
-seaborn
-plotly
-streamlit
-tqdm
-joblib
-ipykernel
+# Core
+numpy==1.26.4
+pandas==2.2.2
+scikit-learn==1.4.2
+
+# Model
+xgboost==2.0.3
+imbalanced-learn==0.12.3
+
+# Explainability
+shap==0.45.0
+
+# Hyperparameter Tuning
+optuna==3.6.1
+
+# Visualization
+matplotlib==3.8.4
+seaborn==0.13.2
+
+# Config
+pyyaml==6.0.1
+
+# Dashboard
+streamlit==1.35.0
+
+# Data storage
+pyarrow==16.1.0
+
+# Dev / Testing
+pytest==8.2.1

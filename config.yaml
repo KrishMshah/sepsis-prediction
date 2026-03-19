@@ -1,0 +1,48 @@
+data:
+  raw_set_a: data/raw/training_setA
+  raw_set_b: data/raw/training_setB
+  interim_combined: data/interim/combined.parquet
+  processed_train: data/processed/train.parquet
+  processed_test: data/processed/test.parquet
+
+preprocessing:
+  test_size: 0.2                  # patient-wise split
+  smote_random_state: 42
+  missingness_drop_threshold: 0.99  # drop columns missing > 99% of values
+
+model:
+  random_state: 42
+  cv_folds: 5
+  scale_pos_weight: 13            # ~93% negative class → 13:1 ratio
+
+features:
+  vitals: [HR, O2Sat, Temp, SBP, MAP, DBP, Resp]
+  labs: [Lactate, WBC, Creatinine, Bilirubin_total, Platelets, BUN, Glucose]
+  static: [Age, Gender, Unit1, Unit2, HospAdmTime]
+  rolling_windows: [6, 12]        # hours for rolling mean/std/delta
+
+stress_test:
+  perturbation_levels: [mild, moderate, severe]
+  mild:
+    Lactate: +1.0
+    HR: +15
+    Creatinine: +0.5
+    MAP: -10
+    Platelets: -50
+  moderate:
+    Lactate: +2.0
+    HR: +25
+    Creatinine: +1.0
+    MAP: -20
+    Platelets: -100
+  severe:
+    Lactate: +3.0
+    HR: +40
+    Creatinine: +2.0
+    MAP: -30
+    Platelets: -150
+
+paths:
+  models: models/
+  figures: outputs/figures/
+  results: outputs/results/
