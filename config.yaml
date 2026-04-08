@@ -13,7 +13,7 @@ preprocessing:
 model:
   random_state: 42
   cv_folds: 5
-  scale_pos_weight: 13            # ~93% negative class → 13:1 ratio
+  scale_pos_weight: 55            # 98.2% negative / 1.8% positive hours
 
 features:
   vitals: [HR, O2Sat, Temp, SBP, MAP, DBP, Resp]
