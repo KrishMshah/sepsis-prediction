@@ -6,6 +6,7 @@ import shap
 import matplotlib.pyplot as plt
 from pathlib import Path
 
+
 def load_config(config_path: str = "config.yaml") -> dict:
     with open(config_path, "r") as f:
         return yaml.safe_load(f)
@@ -128,6 +129,7 @@ def temporal_shap(config: dict, out_dir: Path) -> None:
 
     X     = df[feature_cols].astype(np.float32).values
     hours = df["iculos_hour"].values
+
     explainer   = shap.TreeExplainer(model)
     shap_vals   = explainer.shap_values(X)
     shap_df     = pd.DataFrame(np.abs(shap_vals), columns=feature_cols)
@@ -170,7 +172,7 @@ def save_top_features(shap_values: np.ndarray,
 # --------------------------------------------------------------------------- #
 
 def run(config: dict):
-    out_dir     = Path(config["paths"]["figures"])
+    out_dir     = Path(config["paths"]["figures"]) / "shap"
     results_dir = Path(config["paths"]["results"])
     out_dir.mkdir(parents=True, exist_ok=True)
     results_dir.mkdir(parents=True, exist_ok=True)

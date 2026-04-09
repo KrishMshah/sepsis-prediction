@@ -11,7 +11,6 @@ from sklearn.metrics import (
 )
 from sklearn.calibration import calibration_curve
 
-
 def load_config(config_path: str = "config.yaml") -> dict:
     with open(config_path, "r") as f:
         return yaml.safe_load(f)
@@ -44,11 +43,10 @@ def evaluate(model, X_test: np.ndarray, y_test: np.ndarray, name: str) -> dict:
     f1_scores  = 2 * (precisions * recalls) / (precisions + recalls + 1e-8)
     best_thresh = thresholds[np.argmax(f1_scores[:-1])]
     y_pred = (y_prob >= best_thresh).astype(int)
-
     metrics = {
         "model"      : name,
+        "Accuracy"   : round(accuracy_score(y_test, y_pred),          4),
         "AUROC"      : round(roc_auc_score(y_test, y_prob),            4),
-        "Accuracy"   : round(accuracy_score(y_test, y_pred),           4),
         "AUPRC"      : round(average_precision_score(y_test, y_prob),  4),
         "F1"         : round(f1_score(y_test, y_pred),                 4),
         "Precision"  : round(precision_score(y_test, y_pred),          4),
@@ -94,7 +92,6 @@ def plot_prc(models_probs: dict, y_test: np.ndarray, out_dir: Path) -> None:
     plt.close()
     print("Saved → prc_curve.png")
 
-
 def plot_calibration(models_probs: dict, y_test: np.ndarray, out_dir: Path) -> None:
     """
     Calibration curve — checks if predicted probabilities match real outcomes.
@@ -121,13 +118,17 @@ def plot_calibration(models_probs: dict, y_test: np.ndarray, out_dir: Path) -> N
 # --------------------------------------------------------------------------- #
 
 def run(config: dict):
-    out_dir = Path(config["paths"]["figures"])
+    out_dir = Path(config["paths"]["figures"]) / "evaluation"
     out_dir.mkdir(parents=True, exist_ok=True)
+
     results_dir = Path(config["paths"]["results"])
     results_dir.mkdir(parents=True, exist_ok=True)
+
     X_test, y_test, models = load_data(config)
+
     all_metrics  = []
     models_probs = {}
+
     for name, model in models.items():
         print(f"Evaluating {name}...")
         metrics, y_prob = evaluate(model, X_test, y_test, name)
@@ -149,7 +150,6 @@ def run(config: dict):
     plot_calibration(models_probs, y_test, out_dir)
 
     print("\nEvaluation complete")
-
 
 if __name__ == "__main__":
     config = load_config()
