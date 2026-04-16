@@ -1,9 +1,5 @@
 import streamlit as st
-import numpy as np
 import pandas as pd
-import joblib
-import shap
-import matplotlib.pyplot as plt
 from pathlib import Path
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -11,22 +7,14 @@ from pathlib import Path
 # ─────────────────────────────────────────────────────────────────────────────
 
 st.set_page_config(
-    page_title = "Sepsis Prediction Dashboard",
-    page_icon  = "🏥",
-    layout     = "wide"
+    page_title="Sepsis Prediction Dashboard",
+    page_icon="🏥",
+    layout="wide",
 )
 
-# ────────────────────────────────────────────────────────────────────────────
-#  Load resources (cached so they only load once)
 # ─────────────────────────────────────────────────────────────────────────────
-
-@st.cache_resource
-def load_model():
-    return joblib.load("models/xgboost.pkl")
-
-@st.cache_data
-def load_feature_cols():
-    return pd.read_csv("models/feature_cols.csv").iloc[:, 0].tolist()
+#  Load CSVs (cached)
+# ─────────────────────────────────────────────────────────────────────────────
 
 @st.cache_data
 def load_metrics():
@@ -44,9 +32,6 @@ def load_shap_importance():
 def load_eri():
     return pd.read_csv("outputs/results/eri_paper_table.csv")
 
-model        = load_model()
-feature_cols = load_feature_cols()
-
 # ─────────────────────────────────────────────────────────────────────────────
 #  Sidebar navigation
 # ─────────────────────────────────────────────────────────────────────────────
@@ -55,7 +40,7 @@ st.sidebar.title("Navigation")
 st.sidebar.markdown("---")
 page = st.sidebar.radio(
     "Go to",
-    ["Patient Risk Predictor", "Model Performance", "Global Explainability", "Stress Test Results"]
+    ["Model Performance", "Global Explainability", "Stress Test Results"],
 )
 
 st.sidebar.markdown("---")
@@ -65,151 +50,10 @@ st.sidebar.markdown("**Model:** XGBoost + SHAP")
 st.sidebar.markdown("**Team:** Krish | Yuvraj | Riaan")
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Helper: generate SHAP waterfall for a single patient
+#  PAGE 1 — Model Performance
 # ─────────────────────────────────────────────────────────────────────────────
 
-def shap_waterfall(input_array: np.ndarray, feature_cols: list):
-    explainer   = shap.TreeExplainer(model)
-    shap_vals   = explainer.shap_values(input_array)
-    fig, ax     = plt.subplots(figsize=(10, 6))
-    shap.waterfall_plot(
-        shap.Explanation(
-            values        = shap_vals[0],
-            base_values   = explainer.expected_value,
-            data          = input_array[0],
-            feature_names = feature_cols
-        ),
-        max_display = 15,
-        show        = False
-    )
-    plt.tight_layout()
-    return fig
-
-# ─────────────────────────────────────────────────────────────────────────────
-#  PAGE 1 — Patient Risk Predictor
-# ─────────────────────────────────────────────────────────────────────────────
-
-if page == "Patient Risk Predictor":
-    st.title("Patient Sepsis Risk Predictor")
-    st.markdown("Enter the patient's current ICU readings to get a sepsis risk score and explanation.")
-    st.markdown("---")
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        st.subheader("Vitals")
-        hr      = st.number_input("Heart Rate (HR)",            0.0, 300.0, 85.0)
-        sbp     = st.number_input("Systolic BP (SBP)",          0.0, 300.0, 120.0)
-        map_val = st.number_input("Mean Arterial Pressure (MAP)", 0.0, 200.0, 85.0)
-        dbp     = st.number_input("Diastolic BP (DBP)",         0.0, 200.0, 70.0)
-        resp    = st.number_input("Respiratory Rate (Resp)",    0.0, 60.0,  18.0)
-        o2sat   = st.number_input("O2 Saturation (O2Sat)",      0.0, 100.0, 98.0)
-        temp    = st.number_input("Temperature (Temp)",         30.0, 45.0, 37.0)
-
-    with col2:
-        st.subheader("Labs")
-        lactate    = st.number_input("Lactate",     0.0, 30.0,  1.5)
-        creatinine = st.number_input("Creatinine",  0.0, 20.0,  0.9)
-        wbc        = st.number_input("WBC",         0.0, 100.0, 8.0)
-        platelets  = st.number_input("Platelets",   0.0, 1000.0, 200.0)
-        bun        = st.number_input("BUN",         0.0, 200.0, 15.0)
-        glucose    = st.number_input("Glucose",     0.0, 500.0, 110.0)
-        bilirubin  = st.number_input("Bilirubin Total", 0.0, 30.0, 0.8)
-
-    with col3:
-        st.subheader("Patient Info")
-        age          = st.number_input("Age",              0.0,  100.0, 60.0)
-        iculos       = st.number_input("ICU Hour (ICULOS)", 1.0, 300.0,  6.0)
-        hospadmtime  = st.number_input("Hospital Admission Time", -300.0, 0.0, -10.0)
-        gender       = st.selectbox("Gender", [0, 1], format_func=lambda x: "Female" if x == 0 else "Male")
-        unit1        = st.selectbox("Unit 1", [0, 1])
-        unit2        = st.selectbox("Unit 2", [0, 1])
-        fio2         = st.number_input("FiO2",  0.0, 1.0, 0.21)
-    st.markdown("---")
-    if st.button("Predict Sepsis Risk", type="primary"):
-        with st.spinner("Computing risk and explanation..."):
-
-            # Build a feature vector with defaults for engineered features
-            # Real deployment would compute these from patient history
-            feature_defaults = {f: 0.0 for f in feature_cols}
-
-            # Fill known raw features
-            known = {
-                "HR": hr, "SBP": sbp, "MAP": map_val, "DBP": dbp,
-                "Resp": resp, "O2Sat": o2sat, "Temp": temp,
-                "Lactate": lactate, "Creatinine": creatinine, "WBC": wbc,
-                "Platelets": platelets, "BUN": bun, "Glucose": glucose,
-                "Bilirubin_total": bilirubin, "Age": age,
-                "HospAdmTime": hospadmtime, "iculos_hour": iculos,
-                "Gender": gender, "Unit1": unit1, "Unit2": unit2,
-                "FiO2": fio2,
-                "shock_index": hr / sbp if sbp > 0 else 0,
-                "icu_stay_progress": min(iculos / max(iculos, 1), 1.0),
-                "sofa_renal": 2 if creatinine > 2.0 else (1 if creatinine > 1.2 else 0),
-                "sofa_liver": 2 if bilirubin > 2.0 else (1 if bilirubin > 1.2 else 0),
-                "sofa_coag": 2 if platelets < 100 else (1 if platelets < 150 else 0),
-                "sofa_resp": 1 if o2sat < 95 else 0,
-                "sofa_proxy_total": 0,
-                "HR_delta": 0.0, "MAP_delta": 0.0,
-                "Lactate_delta": 0.0, "Creatinine_delta": 0.0,
-                "Platelets_delta": 0.0,
-            }
-
-            # Compute sofa total
-            known["sofa_proxy_total"] = (
-                known["sofa_renal"] + known["sofa_liver"] +
-                known["sofa_coag"] + known["sofa_resp"]
-            )
-
-            # Fill rolling features with raw values as approximations
-            for col in feature_cols:
-                if col in known:
-                    feature_defaults[col] = known[col]
-                elif "_roll" in col:
-                    base = col.split("_roll")[0]
-                    if base in known:
-                        feature_defaults[col] = known[base]
-
-            X_input = np.array([[feature_defaults[f] for f in feature_cols]], dtype=np.float32)
-            risk    = model.predict_proba(X_input)[0, 1]
-
-            # Display risk score
-            st.markdown("### Sepsis Risk Score")
-            col_r1, col_r2 = st.columns([1, 3])
-
-            with col_r1:
-                color = "#28a745" if risk < 0.3 else ("#ffc107" if risk < 0.6 else "#dc3545")
-                st.markdown(
-                    f"<div style='background:{color};padding:20px;border-radius:10px;"
-                    f"text-align:center;color:white;font-size:36px;font-weight:bold'>"
-                    f"{risk:.1%}</div>",
-                    unsafe_allow_html=True
-                )
-                label = "LOW RISK" if risk < 0.3 else ("MODERATE RISK" if risk < 0.6 else "HIGH RISK")
-                st.markdown(f"<div style='text-align:center;font-size:16px;font-weight:bold;margin-top:8px'>{label}</div>", unsafe_allow_html=True)
-
-            with col_r2:
-                st.progress(float(risk))
-                st.markdown(f"The model predicts a **{risk:.1%}** probability of sepsis onset for this patient at this ICU hour.")
-                if risk >= 0.6:
-                    st.error("High risk detected. Immediate clinical review recommended.")
-                elif risk >= 0.3:
-                    st.warning("Moderate risk. Monitor closely and reassess within 2 hours.")
-                else:
-                    st.success("Low risk. Continue standard monitoring protocol.")
-
-            # SHAP explanation
-            st.markdown("### Why This Score - SHAP Explanation")
-            st.markdown("Red bars = features pushing risk UP. Blue bars = features pushing risk DOWN.")
-            fig = shap_waterfall(X_input, feature_cols)
-            st.pyplot(fig)
-            plt.close()
-
-# ─────────────────────────────────────────────────────────────────────────────
-#  PAGE 2 — Model Performance
-# ─────────────────────────────────────────────────────────────────────────────
-
-elif page == "Model Performance":
+if page == "Model Performance":
     st.title("Model Performance")
     st.markdown("Evaluation results on the held-out test set (310,997 real patient records never seen during training).")
     st.markdown("---")
@@ -254,7 +98,7 @@ elif page == "Model Performance":
                 st.image(str(prc30), caption="PRC Curve - Top 30 Features")
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  PAGE 3 — Global Explainability
+#  PAGE 2 — Global Explainability
 # ─────────────────────────────────────────────────────────────────────────────
 
 elif page == "Global Explainability":
@@ -301,7 +145,7 @@ elif page == "Global Explainability":
     st.info("How SHAP feature importance shifts dynamically across ICU hours.")
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  PAGE 4 — Stress Test Results
+#  PAGE 3 — Stress Test Results
 # ─────────────────────────────────────────────────────────────────────────────
 
 elif page == "Stress Test Results":
