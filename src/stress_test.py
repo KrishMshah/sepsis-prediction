@@ -90,7 +90,7 @@ def compute_eri(risk_baseline: np.ndarray,
 # --------------------------------------------------------------------------- #
 
 def shap_rank_correlation(model, X_baseline: np.ndarray,
-                           X_perturbed: np.ndarray) -> float:
+    X_perturbed: np.ndarray) -> float:
     """
     Spearman rank correlation between baseline and post-stress SHAP rankings.
     1.0 = explanations identical, 0.0 = completely different.
@@ -141,8 +141,8 @@ def plot_eri(eri_df: pd.DataFrame, out_dir: Path) -> None:
 
 
 def plot_shap_comparison(model, X_baseline: np.ndarray,
-                          X_severe: np.ndarray,
-                          feature_cols: list, out_dir: Path) -> None:
+    X_severe: np.ndarray,
+    feature_cols: list, out_dir: Path) -> None:
     """
     Side by side bar chart of top 15 SHAP importances before and after severe stress.
     Visually shows whether explanations stay consistent under worst-case deterioration.
@@ -205,7 +205,7 @@ def run(config: dict):
 
         eri_metrics = compute_eri(risk_baseline, risk_perturbed, magnitudes[level])
         print(f"  ERI: {eri_metrics['ERI']} | "
-              f"Risk increased in {eri_metrics['pct_risk_increased']}% of patients")
+        f"Risk increased in {eri_metrics['pct_risk_increased']}% of patients")
 
         print(f"  Computing SHAP rank correlation...")
         corr = shap_rank_correlation(model, X_baseline, X_perturbed)
